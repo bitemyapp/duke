@@ -1,18 +1,20 @@
 extern crate duke;
 
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 
-// https://rustbyexample.com/hello/print.html
-// fmt::Debug: Uses the {:?} marker. Format text for debugging purposes.
 use duke::{Boost, Query};
 
 #[test]
-fn test_query_match_all() {
-    // let query = Query::MatchAllQuery(Some(Boost(1.0)));
-    // let query = Query::MatchAllQuery(Some(Boost { boost: 1.0 }));
-    let query = Query::MatchAll(duke::MatchAllQuery { boost: None });
+fn test_query_match_all_json() {
+    let boosted_query = Query::MatchAll(duke::MatchAllQuery { boost: Some(Boost(1.5)) });
+    let boosted_query_expect = json!({"match_all": {"boost": 1.5}});
+    let no_boost_query = Query::MatchAll(duke::MatchAllQuery { boost: None });
+    let no_boost_query_expect = json!({"match_all": {}});
 
-    let jstr = serde_json::to_string(&query);
-    println!("{:?}", jstr);
+    assert_eq!(serde_json::to_value(boosted_query).unwrap(),
+               boosted_query_expect);
+    assert_eq!(serde_json::to_value(no_boost_query).unwrap(),
+               no_boost_query_expect);
 }
