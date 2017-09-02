@@ -6,3 +6,6 @@ test:
 
 test-debug:
 	RUST_LOG=duke=debug cargo test -- --nocapture
+
+fmt:
+	cargo fmt

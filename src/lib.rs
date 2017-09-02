@@ -14,11 +14,12 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate elastic;
 #[macro_use]
 extern crate elastic_derive;
-extern crate elastic;
-#[macro_use] extern crate log;
 extern crate env_logger;
+#[macro_use]
+extern crate log;
 
 use elastic::prelude::*;
 use futures::{Future, Stream};
@@ -34,21 +35,18 @@ use std::{thread, time};
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Search {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    query: Option<Query>
+    #[serde(skip_serializing_if = "Option::is_none")] query: Option<Query>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Query {
-    #[serde(rename = "match_all")]
-    MatchAll(MatchAllQuery)
+    #[serde(rename = "match_all")] MatchAll(MatchAllQuery),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct MatchAllQuery {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub boost: Option<Boost>
+    #[serde(skip_serializing_if = "Option::is_none")] pub boost: Option<Boost>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -58,7 +56,7 @@ pub struct Boost(pub f64);
 #[serde(rename_all = "snake_case")]
 struct Tweet {
     user_name: String,
-    message: String
+    message: String,
 }
 
 fn twitter_index() -> Index<'static> {
@@ -85,7 +83,11 @@ pub fn test_talk_to_server() {
     // });
     // let query = json!({});
     // let query = json!();
-    let query = Search { query: Some(Query::MatchAll(MatchAllQuery { boost: Some(Boost(1.5)) }))};
+    let query = Search {
+        query: Some(Query::MatchAll(MatchAllQuery {
+            boost: Some(Boost(1.5)),
+        })),
+    };
     let index_name = "duke_twitter_index".to_string();
     let mapping_name = "tweet".to_string();
     let doc_id = "1".to_string();
@@ -98,7 +100,13 @@ pub fn test_talk_to_server() {
     // client.put_mapping::<Tweet>(twitter_index()).send().unwrap();
 
     let example_tweet = Tweet { user_name: "bitemyapp".to_string(), message: "The Industrial Revolution and its consequences have been a disaster for the human race. They have greatly increased the life-expectancy of those of us who live in “advanced” countries, but they have destabilized society, have made life unfulfilling, have subjected human beings to indignities, have led to widespread psychological suffering (in the Third World to physical suffering as well) and have inflicted severe damage on the natural world. The continued development of technology will worsen the situation. It will certainly subject human beings to greater indignities and inflict greater damage on the natural world, it will probably lead to greater social disruption and psychological suffering, and it may lead to increased physical suffering even in “advanced” countries.".to_string() };
-    insert_document(build_url(""), &index_name, &mapping_name, &doc_id, &example_tweet);
+    insert_document(
+        build_url(""),
+        &index_name,
+        &mapping_name,
+        &doc_id,
+        &example_tweet,
+    );
     let wait_time = time::Duration::from_secs(1);
     thread::sleep(wait_time);
     let res = search(build_url(""), &index_name, &query);
@@ -120,8 +128,14 @@ pub fn build_url(pl: &str) -> String {
     format!("http://localhost:9200{}", pl)
 }
 
-pub fn dispatch_elasticsearch_request<T>(url: String, method: Method, json_body: &Option<T>) -> String
- where T: Serialize {
+pub fn dispatch_elasticsearch_request<T>(
+    url: String,
+    method: Method,
+    json_body: &Option<T>,
+) -> String
+where
+    T: Serialize,
+{
     let mut core = tokio_core::reactor::Core::new().unwrap();
     let handle = core.handle();
     let client = hyper::Client::configure()
@@ -138,7 +152,7 @@ pub fn dispatch_elasticsearch_request<T>(url: String, method: Method, json_body:
     }
     match *json_body {
         Some(ref body) => req.set_body(serde_json::to_string(&json_body).unwrap()),
-        _ => ()
+        _ => (),
     };
     let mut s = String::new();
     {
@@ -167,18 +181,27 @@ pub fn delete_index(url: String, index: &String) -> String {
     dispatch_elasticsearch_request(index_url, Method::Delete, &None::<String>)
 }
 
-pub fn insert_document<T>(url: String, index: &String,
-                          mapping: &String, doc_id: &String,
-                          doc: &T) -> String where T: Serialize {
+pub fn insert_document<T>(
+    url: String,
+    index: &String,
+    mapping: &String,
+    doc_id: &String,
+    doc: &T,
+) -> String
+where
+    T: Serialize,
+{
     let index_url = format!("{}/{}/{}/{}", url, index, mapping, doc_id);
     dispatch_elasticsearch_request(index_url, Method::Post, &Some(doc))
 }
 
-pub fn search<T>(url: String, index: &String,
-              search_body: &T) -> String where T: Serialize {
+pub fn search<T>(url: String, index: &String, search_body: &T) -> String
+where
+    T: Serialize,
+{
     let search_url = format!("{}/{}/_search", url, index);
     dispatch_elasticsearch_request(search_url, Method::Post, &Some(search_body))
-    // dispatch_elasticsearch_request(search_url, Method::Post, &None::<String>)    
+    // dispatch_elasticsearch_request(search_url, Method::Post, &None::<String>)
 }
 
 pub struct IndexName(pub String);
