@@ -9,3 +9,6 @@ test-debug:
 
 fmt:
 	cargo fmt
+
+rustfix:
+	rustfix
