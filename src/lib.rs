@@ -29,6 +29,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Debug;
 use std::str;
+use std::{thread, time};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -69,7 +70,7 @@ pub fn test_talk_to_server() {
     env_logger::init().unwrap();
     // A reqwest HTTP client and default parameters.
     // The `params` includes the base node url (http://localhost:9200).
-    let client = ClientBuilder::new().build().unwrap();
+    // let client = ClientBuilder::new().build().unwrap();
     // let query = json!({
     //     "query": {
     //         "query_string": {
@@ -77,12 +78,14 @@ pub fn test_talk_to_server() {
     //         }
     //     }
     // });
-    let query = json!({
-        "query": {
-            "match_all": {}
-        }
-    });
-
+    // let query = json!({
+    //     "query": {
+    //         "match_all": {}
+    //     }
+    // });
+    // let query = json!({});
+    // let query = json!();
+    let query = Search { query: Some(Query::MatchAll(MatchAllQuery { boost: Some(Boost(1.5)) }))};
     let index_name = "duke_twitter_index".to_string();
     let mapping_name = "tweet".to_string();
     let doc_id = "1".to_string();
@@ -92,26 +95,15 @@ pub fn test_talk_to_server() {
 
     // client.create_index(twitter_index).send().unwrap();
 
-    client.put_mapping::<Tweet>(twitter_index()).send().unwrap();
+    // client.put_mapping::<Tweet>(twitter_index()).send().unwrap();
 
     let example_tweet = Tweet { user_name: "bitemyapp".to_string(), message: "The Industrial Revolution and its consequences have been a disaster for the human race. They have greatly increased the life-expectancy of those of us who live in “advanced” countries, but they have destabilized society, have made life unfulfilling, have subjected human beings to indignities, have led to widespread psychological suffering (in the Third World to physical suffering as well) and have inflicted severe damage on the natural world. The continued development of technology will worsen the situation. It will certainly subject human beings to greater indignities and inflict greater damage on the natural world, it will probably lead to greater social disruption and psychological suffering, and it may lead to increased physical suffering even in “advanced” countries.".to_string() };
     insert_document(build_url(""), &index_name, &mapping_name, &doc_id, &example_tweet);
-
-    // Send the request and process the response.
-    let res = client
-        .search::<Value>()
-        .index(twitter_index())
-        .body(query.to_string())
-        .send()
-        .unwrap();
-
-    // Iterate through the hits in the response.
-    for hit in res.hits() {
-        println!("{:?}", hit);
-    }
+    let wait_time = time::Duration::from_secs(1);
+    thread::sleep(wait_time);
+    let res = search(build_url(""), &index_name, &query);
 
     println!("{:?}", res);
-
 }
 
 // #[test]
@@ -136,6 +128,7 @@ pub fn dispatch_elasticsearch_request<T>(url: String, method: Method, json_body:
         .connector(hyper_tls::HttpsConnector::new(4, &handle).unwrap())
         .build(&handle);
     let url = url.parse().unwrap();
+    println!("{:?}", url);
     // let req = Request::new(Method::Get, url);
 
     let mut req = Request::new(method, url);
@@ -179,6 +172,13 @@ pub fn insert_document<T>(url: String, index: &String,
                           doc: &T) -> String where T: Serialize {
     let index_url = format!("{}/{}/{}/{}", url, index, mapping, doc_id);
     dispatch_elasticsearch_request(index_url, Method::Post, &Some(doc))
+}
+
+pub fn search<T>(url: String, index: &String,
+              search_body: &T) -> String where T: Serialize {
+    let search_url = format!("{}/{}/_search", url, index);
+    dispatch_elasticsearch_request(search_url, Method::Post, &Some(search_body))
+    // dispatch_elasticsearch_request(search_url, Method::Post, &None::<String>)    
 }
 
 pub struct IndexName(pub String);
