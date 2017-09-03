@@ -42,10 +42,10 @@ pub struct Search {
 pub enum Query {
     #[serde(rename = "match_all")] MatchAll(MatchAllQuery),
     #[serde(rename = "term")] TermQuery(TermQuery),
+    // #[serde(rename = "
 }
 
-// #[derive(Serialize, Deserialize)]
-// #[derive(Deserialize)]
+// {"query": { "terms" : { "message" : ["industrial", "revolution"]} }}
 
 pub struct TermQuery {
     pub term_query_term: Term,
@@ -57,44 +57,25 @@ pub struct Term {
     pub term_value: String,
 }
 
-// {
-//           "term": {
-//             "status": {
-//               "value": "urgent",
-//               "boost": 2.0 
-//             }
-//           }
-// }
-
 impl Serialize for TermQuery {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        let mut term_query_map = Map::new();
         let mut term_field_map= Map::new();
         let mut term_map = Map::new();
-        term_map["value"] = Value::String(self.term_query_term.term_value.clone());
+        term_map.insert("value".to_string(), Value::String(self.term_query_term.term_value.clone()));
         match self.term_query_boost {
             Some(ref boost) => {
-                // .map_err(S::Error::custom)
-                let num: Result<Value, S::Error> = lift_error(boost.clone().to_value());
-                term_map["boost"] = num?
+                let num = lift_error::<Value, S>(boost.clone().to_value());
+                term_map.insert("boost".to_string(), num?);
             }
             _ => (),
         }
-        term_field_map[&self.term_query_term.term_field.clone()] =
-            Value::Object(term_map);
-        term_query_map["term"] =
-            Value::Object(term_field_map);
-        let json_val = Value::Object(term_query_map);
+        term_field_map.insert(self.term_query_term.term_field.clone(), Value::Object(term_map));
+        let json_val = Value::Object(term_field_map);
         json_val.serialize(serializer)
-        // unimplemented!();
     }
 }
-
-// TermQuery                     Term (Maybe Boost)
-// data Term = Term { termField :: Text
-//                  , termValue :: Text } deriving (Eq, Read, Show, Generic, Typeable)
 
 #[derive(Serialize)]
 pub struct MatchAllQuery {
@@ -102,34 +83,14 @@ pub struct MatchAllQuery {
 }
 
 #[derive(Clone, Serialize)]
-pub struct Boost(f64);
-
-// impl Into<Value> for Boost {
-//     fn into(self) -> Value {
-//         match self {
-//             Boost(num) => Value::Number(num),
-//         }
-//     }
-
-//     }
-// }
+pub struct Boost(pub f64);
 
 pub fn lift_error<V, S>(val: Result<V, String>) -> Result<V, S::Error>
     where S: Serializer {
     val.map_err(S::Error::custom)
-//     unimplemented!();
 }
 
 impl Boost {
-    // fn to_value<S>(self) -> Result<Value, S::Error>
-    //  where
-    //     S: Serializer {
-    //     match Number::from_f64(self.unpack()) {
-    //         Some(num) => Ok(Value::Number(num)),
-    //         None =>
-    //             Err(S::Error::custom("Could not convert Boost float to JSON Number")),
-    //     }
-    // }
     fn to_value(self) -> Result<Value, String> {
         match Number::from_f64(self.unpack()) {
             Some(num) => Ok(Value::Number(num)),
@@ -143,6 +104,12 @@ impl Boost {
             Boost(num) => num,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct NonEmpty<V> {
+    pub val: V,
+    pub rest: Vec<V>,
 }
 
 pub fn build_url(pl: &str) -> String {
@@ -172,7 +139,11 @@ where
         headers.set(ContentType::json());
     }
     match *json_body {
-        Some(_) => req.set_body(serde_json::to_string(&json_body).unwrap()),
+        Some(_) => {
+            let json_str = serde_json::to_string(&json_body).unwrap();
+            // println!("{}", json_str);
+            req.set_body(json_str)
+        }
         _ => (),
     };
     let mut s = String::new();
@@ -185,6 +156,7 @@ where
         });
         core.run(work).unwrap();
     }
+    // println!("{:?}", s);
     s
 }
 

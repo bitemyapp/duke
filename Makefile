@@ -8,7 +8,7 @@ test:
 	cargo test -- --nocapture
 
 test-debug:
-	RUST_LOG=duke=debug cargo test -- --nocapture
+	RUST_BACKTRACE=1 RUST_LOG=duke=debug cargo test -- --nocapture
 
 fmt:
 	cargo fmt
