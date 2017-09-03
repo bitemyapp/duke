@@ -23,7 +23,9 @@ use hyper::Method;
 use hyper::Request;
 use serde::Serialize;
 use serde::Serializer;
+use serde::ser::Error;
 use serde::ser::SerializeMap;
+use serde_json::Map;
 use serde_json::Number;
 use serde_json::Value;
 use std::fmt::Debug;
@@ -51,8 +53,8 @@ pub struct TermQuery {
 }
 
 pub struct Term {
-    pub termField: String,
-    pub termValue: String,
+    pub term_field: String,
+    pub term_value: String,
 }
 
 // {
@@ -68,30 +70,25 @@ impl Serialize for TermQuery {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {
-        let mut map = serializer.serialize_map(None)?;
-        let mut term_map = serializer.serialize_map(None)?;
-        let mut term_value_map = serializer.serialize_map(None)?;
-        term_value_map.serialize_entry("value", self.term_query_term.termValue);
-        match *self.term_query_boost {
-            Some(boost) => term_value_map.serialize_entry("boost", boost),
+        let mut term_query_map = Map::new();
+        let mut term_field_map= Map::new();
+        let mut term_map = Map::new();
+        term_map["value"] = Value::String(self.term_query_term.term_value.clone());
+        match self.term_query_boost {
+            Some(ref boost) => {
+                // .map_err(S::Error::custom)
+                let num: Result<Value, S::Error> = lift_error(boost.clone().to_value());
+                term_map["boost"] = num?
+            }
             _ => (),
         }
-        term_map.serialize_entry(&self.term_query_term.termField, &term_value_map);
-        map.serialize_entry("term", &term_map);
-        map.end()
-        // let jsonVal =
-        //     json!({"term":
-        //            {self.termField:
-        //             {"value": self.termValue}}});
-        // serializer.serialize(jsonVal)
-        // jsonVal.serialize(serializer);
-        // serializer
-        // let mut map = serializer.serialize_map(None)?;
-        // map.serialize_entry(""
-        // for (k, v) in self {
-        //     map.serialize_entry(k, v)?;
-        // }
-        // map.end()
+        term_field_map[&self.term_query_term.term_field.clone()] =
+            Value::Object(term_map);
+        term_query_map["term"] =
+            Value::Object(term_field_map);
+        let json_val = Value::Object(term_query_map);
+        json_val.serialize(serializer)
+        // unimplemented!();
     }
 }
 
@@ -104,8 +101,49 @@ pub struct MatchAllQuery {
     #[serde(skip_serializing_if = "Option::is_none")] pub boost: Option<Boost>,
 }
 
-#[derive(Serialize)]
-pub struct Boost(pub f64);
+#[derive(Clone, Serialize)]
+pub struct Boost(f64);
+
+// impl Into<Value> for Boost {
+//     fn into(self) -> Value {
+//         match self {
+//             Boost(num) => Value::Number(num),
+//         }
+//     }
+
+//     }
+// }
+
+pub fn lift_error<V, S>(val: Result<V, String>) -> Result<V, S::Error>
+    where S: Serializer {
+    val.map_err(S::Error::custom)
+//     unimplemented!();
+}
+
+impl Boost {
+    // fn to_value<S>(self) -> Result<Value, S::Error>
+    //  where
+    //     S: Serializer {
+    //     match Number::from_f64(self.unpack()) {
+    //         Some(num) => Ok(Value::Number(num)),
+    //         None =>
+    //             Err(S::Error::custom("Could not convert Boost float to JSON Number")),
+    //     }
+    // }
+    fn to_value(self) -> Result<Value, String> {
+        match Number::from_f64(self.unpack()) {
+            Some(num) => Ok(Value::Number(num)),
+            None =>
+                Err("Could not convert Boost float to JSON Number".to_string()),
+        }
+    }
+
+    fn unpack(self) -> f64 {
+        match self {
+            Boost(num) => num,
+        }
+    }
+}
 
 pub fn build_url(pl: &str) -> String {
     format!("http://localhost:9200{}", pl)

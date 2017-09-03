@@ -1,6 +1,9 @@
 build:
 	cargo build
 
+build-watch:
+	cargo watch -x build
+
 test:
 	cargo test -- --nocapture
 
