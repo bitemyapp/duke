@@ -172,9 +172,9 @@ pub fn delete_index(url: &str, index: &str) -> String {
 
 pub fn insert_document<T>(
     url: String,
-    index: &String,
-    mapping: &String,
-    doc_id: &String,
+    index: &str,
+    mapping: &str,
+    doc_id: &str,
     doc: &T,
 ) -> String
 where

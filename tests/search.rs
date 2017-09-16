@@ -15,7 +15,7 @@ fn search_all() {
         })),
     };
     let res: SearchResponse<Tweet> =
-        search(&build_url(""), &INDEX_NAME.to_string(), &query).unwrap();
+        search(&build_url(""), INDEX_NAME, &query).unwrap();
     assert_eq!(1, res.hits.hits.len());
     assert_eq!(example_tweet(), res.hits.hits[0]._source);
 }
@@ -27,7 +27,7 @@ fn search_all_boosted() {
         })),
     };
     let res: SearchResponse<Tweet> =
-        search(&build_url(""), &INDEX_NAME.to_string(), &query).unwrap();
+        search(&build_url(""), INDEX_NAME, &query).unwrap();
     assert_eq!(1, res.hits.hits.len());
     assert_eq!(example_tweet(), res.hits.hits[0]._source);
 }
@@ -42,7 +42,7 @@ fn search_term_query() {
         })),
     };
     let res: SearchResponse<Tweet> =
-        search(&build_url(""), &INDEX_NAME.to_string(), &query).unwrap();
+        search(&build_url(""), INDEX_NAME, &query).unwrap();
     // let res: Result<SearchResponse<Tweet>, serde_json::error::Error> =
     //     search(&build_url(""), &INDEX_NAME.to_string(), &query);
     // println!("{:?}", res);

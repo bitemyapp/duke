@@ -13,14 +13,14 @@ mod search;
 
 pub fn setup() {
     env_logger::init().unwrap();
-    let doc_id = "1".to_string();
-    delete_index(&build_url(""), &INDEX_NAME.to_string());
-    create_index(&build_url(""), &INDEX_NAME.to_string());
+    let doc_id = "1";
+    delete_index(&build_url(""), INDEX_NAME);
+    create_index(&build_url(""), INDEX_NAME);
     insert_document(
         build_url(""),
-        &INDEX_NAME.to_string(),
-        &MAPPING_NAME.to_string(),
-        &doc_id,
+        INDEX_NAME,
+        MAPPING_NAME,
+        doc_id,
         &example_tweet(),
     );
     let wait_time = time::Duration::from_secs(1);
