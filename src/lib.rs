@@ -133,11 +133,8 @@ where
     // println!("{:?}", url);
 
     let mut req = Request::new(method, url);
-    {
-        // let mut headers = req.headers_mut();
-        let headers = req.headers_mut();
-        headers.set(ContentType::json());
-    }
+    req.headers_mut().set(ContentType::json());
+
     match *json_body {
         Some(_) => {
             let json_str = serde_json::to_string(&json_body).unwrap();
@@ -172,9 +169,9 @@ pub fn delete_index(url: &str, index: &str) -> String {
 
 pub fn insert_document<T>(
     url: String,
-    index: &String,
-    mapping: &String,
-    doc_id: &String,
+    index: &str,
+    mapping: &str,
+    doc_id: &str,
     doc: &T,
 ) -> String
 where
