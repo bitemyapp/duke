@@ -1,17 +1,38 @@
-build:
-	cargo build
+package = duke
 
-build-watch:
-	cargo watch -x build
+env = OPENSSL_INCLUDE_DIR="/usr/local/opt/openssl/include"
+cargo = $(env) cargo
+debug-env = RUST_BACKTRACE=1 RUST_LOG=$(package)=debug
+debug-cargo = $(env) $(debug-env) cargo
+
+build:
+	$(cargo) build
+
+build-release:
+	$(cargo) build --release
+
+run: build
+	./target/debug/$(package)
+
+install:
+	$(cargo) install
 
 test:
-	cargo test -- --nocapture
+	$(cargo) test
 
 test-debug:
-	RUST_BACKTRACE=1 RUST_LOG=duke=debug cargo test -- --nocapture
+	$(debug-cargo) test -- --nocapture
 
 fmt:
-	cargo fmt
+	$(cargo) fmt
 
-rustfix:
-	rustfix
+watch:
+	$(cargo) watch -- cargo build
+
+# You need nightly for rustfmt at the moment
+dev-deps:
+	cargo install fmt
+	cargo install rustfmt-nightly
+
+.PHONY : build build-release run install test test-debug fmt watch dev-deps
+
